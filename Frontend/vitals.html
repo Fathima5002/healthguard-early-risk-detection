@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard — Vitals Input</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+          font-family: 'Segoe UI', sans-serif;
+          background: #f0f4f8;
+          min-height: 100vh;
+          padding: 30px 16px;
+        }
+
+        .container { max-width: 520px; margin: 0 auto; }
+
+        .header {
+          background: white;
+          border-radius: 16px;
+          padding: 20px 24px;
+          margin-bottom: 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .header h1 { font-size: 18px; color: #1a202c; }
+        .header span { font-size: 13px; color: #718096; }
+
+        .nav { display: flex; gap: 8px; margin-bottom: 16px; }
+        .nav a {
+          flex: 1;
+          text-align: center;
+          padding: 8px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 500;
+          text-decoration: none;
+          background: white;
+          color: #718096;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .nav a.active { background: #4299e1; color: white; }
+
+        .card {
+          background: white;
+          border-radius: 16px;
+          padding: 24px;
+          margin-bottom: 16px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .card-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #2d3748;
+          margin-bottom: 16px;
+          padding-bottom: 10px;
+          border-bottom: 1px solid #f0f4f8;
+        }
+
+        label {
+          display: block;
+          font-size: 12px;
+          font-weight: 500;
+          color: #4a5568;
+          margin-bottom: 4px;
+        }
+
+        .hint { font-size: 11px; color: #a0aec0; margin-bottom: 6px; }
+
+        input[type="number"] {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 14px;
+          color: #2d3748;
+          margin-bottom: 14px;
+          outline: none;
+        }
+
+        input[type="number"]:focus { border-color: #4299e1; }
+
+        .symptom-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+
+        .symptom-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 13px;
+          color: #4a5568;
+          transition: all 0.15s;
+        }
+
+        .symptom-item input[type="checkbox"] { display: none; }
+
+        .symptom-item.checked {
+          border-color: #4299e1;
+          background: #ebf8ff;
+          color: #2b6cb0;
+          font-weight: 500;
+        }
+
+        .check-icon {
+          width: 16px;
+          height: 16px;
+          border: 1.5px solid #cbd5e0;
+          border-radius: 4px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+        }
+
+        .symptom-item.checked .check-icon {
+          background: #4299e1;
+          border-color: #4299e1;
+          color: white;
+        }
+
+        button {
+          width: 100%;
+          padding: 14px;
+          background: #4299e1;
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-size: 15px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        button:hover { background: #3182ce; }
+        button:disabled { background: #a0aec0; cursor: not-allowed; }
+
+        .msg {
+          padding: 10px 14px;
+          border-radius: 8px;
+          font-size: 13px;
+          margin-bottom: 16px;
+          display: none;
+        }
+
+        .msg.error { background: #fff5f5; color: #c53030; }
+        .msg.success { background: #f0fff4; color: #276749; }
+
+        .disclaimer {
+          font-size: 11px;
+          color: #a0aec0;
+          text-align: center;
+          margin-top: 12px;
+          line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>🏥 HealthGuard</h1>
+        <span id="userName">Loading...</span>
+    </div>
+
+    <div class="nav">
+        <a href="vitals.html" class="active">📋 Vitals</a>
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a href="history.html">🕐 History</a>
+    </div>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="card">
+        <div class="card-title">📏 Today's measurements</div>
+
+        <label>Heart rate (bpm)</label>
+        <div class="hint">Normal range: 60–100 bpm</div>
+        <input type="number" id="heartRate" placeholder="e.g. 78" min="30" max="220">
+
+        <label>Blood pressure — systolic (mmHg)</label>
+        <div class="hint">Normal: below 120 mmHg</div>
+        <input type="number" id="bloodPressure" placeholder="e.g. 120" min="60" max="250">
+
+        <label>Blood glucose level (mg/dL)</label>
+        <div class="hint">Normal fasting: 70–100 mg/dL</div>
+        <input type="number" id="bloodGlucose" placeholder="e.g. 95" min="40" max="600">
+
+        <label>Cholesterol (mg/dL) — optional</label>
+        <div class="hint">Leave blank if unknown</div>
+        <input type="number" id="cholesterol" placeholder="e.g. 200" min="50" max="600">
+    </div>
+
+    <div class="card">
+        <div class="card-title">🩺 Symptoms — select all that apply</div>
+        <div class="symptom-grid">
+            <div class="symptom-item" id="s-chestPain" onclick="toggleSymptom('chestPain')">
+                <div class="check-icon">✓</div> Chest pain
+            </div>
+            <div class="symptom-item" id="s-fatigue" onclick="toggleSymptom('fatigue')">
+                <div class="check-icon">✓</div> Fatigue
+            </div>
+            <div class="symptom-item" id="s-dizziness" onclick="toggleSymptom('dizziness')">
+                <div class="check-icon">✓</div> Dizziness
+            </div>
+            <div class="symptom-item" id="s-shortnessBreath" onclick="toggleSymptom('shortnessBreath')">
+                <div class="check-icon">✓</div> Shortness of breath
+            </div>
+            <div class="symptom-item" id="s-headache" onclick="toggleSymptom('headache')">
+                <div class="check-icon">✓</div> Headache
+            </div>
+            <div class="symptom-item" id="s-frequentUrination" onclick="toggleSymptom('frequentUrination')">
+                <div class="check-icon">✓</div> Frequent urination
+            </div>
+            <div class="symptom-item" id="s-blurredVision" onclick="toggleSymptom('blurredVision')">
+                <div class="check-icon">✓</div> Blurred vision
+            </div>
+        </div>
+    </div>
+
+    <button id="btn" onclick="submitVitals()">Submit and get risk assessment</button>
+
+    <p class="disclaimer">
+        ⚠️ This tool estimates health risk only. It is not a medical diagnosis.
+        Always consult a qualified healthcare professional.
+    </p>
+</div>
+
+<script>
+    // Track which symptoms are checked
+    const symptoms = {
+      chestPain: false, fatigue: false, dizziness: false,
+      shortnessBreath: false, headache: false,
+      frequentUrination: false, blurredVision: false
+    };
+
+    // Show user name from localStorage
+    document.getElementById("userName").textContent =
+      localStorage.getItem("userName") || "Guest";
+
+    function toggleSymptom(key) {
+      symptoms[key] = !symptoms[key];
+      const el = document.getElementById("s-" + key);
+      el.classList.toggle("checked", symptoms[key]);
+    }
+
+    function showMsg(text, type) {
+      const el = document.getElementById("msg");
+      el.textContent = text;
+      el.className = "msg " + type;
+      el.style.display = "block";
+    }
+
+    async function submitVitals() {
+      const userId      = localStorage.getItem("userId");
+      const heartRate   = parseInt(document.getElementById("heartRate").value);
+      const bp          = parseInt(document.getElementById("bloodPressure").value);
+      const glucose     = parseInt(document.getElementById("bloodGlucose").value);
+      const cholesterol = document.getElementById("cholesterol").value;
+
+      // Validation
+      if (!userId)         return showMsg("No profile found. Please register first.", "error");
+      if (!heartRate)      return showMsg("Please enter your heart rate.", "error");
+      if (!bp)             return showMsg("Please enter your blood pressure.", "error");
+      if (!glucose)        return showMsg("Please enter your blood glucose level.", "error");
+
+      const btn = document.getElementById("btn");
+      btn.disabled = true;
+      btn.textContent = "Analysing your data...";
+
+      try {
+        const response = await fetch("http://localhost:8080/api/health/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            healthRecord: {
+              userId: parseInt(userId),
+              heartRate,
+              bloodPressure: bp,
+              bloodGlucose: glucose,
+              cholesterol: cholesterol ? parseInt(cholesterol) : null
+            },
+            symptom: { ...symptoms }
+          })
+        });
+
+        const prediction = await response.json();
+
+        // Save prediction to localStorage so dashboard can read it
+        localStorage.setItem("lastPrediction", JSON.stringify(prediction));
+
+        showMsg("Assessment complete! Redirecting to dashboard...", "success");
+        setTimeout(() => window.location.href = "dashboard.html", 1000);
+
+      } catch (err) {
+        showMsg("Could not connect to server. Make sure Spring Boot and Flask are running.", "error");
+        btn.disabled = false;
+        btn.textContent = "Submit and get risk assessment";
+      }
+    }
+</script>
+</body>
+</html>

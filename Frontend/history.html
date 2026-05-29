@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard — History</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; padding: 30px 16px; }
+        .container { max-width: 520px; margin: 0 auto; }
+
+        .header {
+          background: white; border-radius: 16px; padding: 20px 24px;
+          margin-bottom: 16px; display: flex; justify-content: space-between;
+          align-items: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .header h1 { font-size: 18px; color: #1a202c; }
+
+        .nav { display: flex; gap: 8px; margin-bottom: 16px; }
+        .nav a {
+          flex: 1; text-align: center; padding: 8px; border-radius: 8px;
+          font-size: 12px; font-weight: 500; text-decoration: none;
+          background: white; color: #718096; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .nav a.active { background: #4299e1; color: white; }
+
+        .card {
+          background: white; border-radius: 16px; padding: 24px;
+          margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .card-title {
+          font-size: 14px; font-weight: 600; color: #2d3748;
+          margin-bottom: 16px; padding-bottom: 10px;
+          border-bottom: 1px solid #f0f4f8;
+        }
+
+        .history-item {
+          border: 1px solid #e2e8f0; border-radius: 10px;
+          padding: 14px 16px; margin-bottom: 10px;
+        }
+
+        .history-date { font-size: 11px; color: #a0aec0; margin-bottom: 8px; }
+
+        .history-scores { display: flex; gap: 10px; margin-bottom: 8px; }
+
+        .score-pill {
+          flex: 1; text-align: center; border-radius: 8px; padding: 8px 4px;
+        }
+        .score-pill .label { font-size: 10px; margin-bottom: 2px; }
+        .score-pill .value { font-size: 16px; font-weight: 600; }
+        .score-pill .cat   { font-size: 10px; font-weight: 600; }
+
+        .score-pill.high     { background: #fff5f5; }
+        .score-pill.high .value, .score-pill.high .cat { color: #c53030; }
+        .score-pill.high .label { color: #fc8181; }
+
+        .score-pill.moderate { background: #fffaf0; }
+        .score-pill.moderate .value, .score-pill.moderate .cat { color: #c05621; }
+        .score-pill.moderate .label { color: #f6ad55; }
+
+        .score-pill.low      { background: #f0fff4; }
+        .score-pill.low .value, .score-pill.low .cat { color: #276749; }
+        .score-pill.low .label { color: #68d391; }
+
+        .rec-text { font-size: 11px; color: #718096; line-height: 1.4; }
+
+        .no-data { text-align: center; color: #a0aec0; font-size: 14px; padding: 30px; }
+        .loading  { text-align: center; color: #a0aec0; font-size: 14px; padding: 30px; }
+
+        .disclaimer {
+          font-size: 11px; color: #a0aec0; text-align: center;
+          margin-top: 12px; line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>🏥 HealthGuard</h1>
+        <span id="userName" style="font-size:13px;color:#718096;"></span>
+    </div>
+
+    <div class="nav">
+        <a href="vitals.html">📋 Vitals</a>
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a href="history.html" class="active">🕐 History</a>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🕐 Past assessments</div>
+        <div id="historyList"><div class="loading">Loading history...</div></div>
+    </div>
+
+    <p class="disclaimer">
+        ⚠️ This tool estimates health risk only. Not a medical diagnosis.
+        Always consult a qualified healthcare professional.
+    </p>
+</div>
+
+<script>
+    document.getElementById("userName").textContent =
+      localStorage.getItem("userName") || "Guest";
+
+    const userId = localStorage.getItem("userId");
+
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("en-IN", {
+        day: "numeric", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    async function loadHistory() {
+      const container = document.getElementById("historyList");
+
+      if (!userId) {
+        container.innerHTML = '<div class="no-data">No profile found. Please register first.</div>';
+        return;
+      }
+
+      try {
+        const res  = await fetch(`http://localhost:8080/api/health/history/${userId}`);
+        const data = await res.json();
+
+        if (data.length === 0) {
+          container.innerHTML = '<div class="no-data">No assessments yet. Submit your vitals to begin.</div>';
+          return;
+        }
+
+        container.innerHTML = data.map(p => {
+          const hPct = Math.round(p.heartRisk * 100);
+          const dPct = Math.round(p.diabetesRisk * 100);
+          const hCat = p.heartCategory.toLowerCase();
+          const dCat = p.diabetesCategory.toLowerCase();
+
+          return `
+            <div class="history-item">
+              <div class="history-date">📅 ${formatDate(p.predictedAt)}</div>
+              <div class="history-scores">
+                <div class="score-pill ${hCat}">
+                  <div class="label">❤️ Heart</div>
+                  <div class="value">${hPct}%</div>
+                  <div class="cat">${p.heartCategory}</div>
+                </div>
+                <div class="score-pill ${dCat}">
+                  <div class="label">🩸 Diabetes</div>
+                  <div class="value">${dPct}%</div>
+                  <div class="cat">${p.diabetesCategory}</div>
+                </div>
+              </div>
+              <div class="rec-text">💡 ${p.recommendation}</div>
+            </div>
+          `;
+        }).join("");
+
+      } catch (e) {
+        container.innerHTML = '<div class="no-data">Could not load history. Make sure Spring Boot is running.</div>';
+      }
+    }
+
+    loadHistory();
+</script>
+</body>
+</html>

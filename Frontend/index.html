@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard — Early Risk Detection System</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+          font-family: 'Segoe UI', sans-serif;
+          background: #f0f4f8;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .card {
+          background: white;
+          border-radius: 16px;
+          padding: 40px;
+          width: 100%;
+          max-width: 460px;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+
+        .logo { font-size: 28px; margin-bottom: 6px; }
+
+        h1 {
+          font-size: 22px;
+          color: #1a202c;
+          margin-bottom: 4px;
+        }
+
+        .subtitle {
+          font-size: 13px;
+          color: #718096;
+          margin-bottom: 28px;
+        }
+
+        label {
+          display: block;
+          font-size: 13px;
+          font-weight: 500;
+          color: #4a5568;
+          margin-bottom: 5px;
+        }
+
+        input, select {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 14px;
+          color: #2d3748;
+          margin-bottom: 18px;
+          outline: none;
+          transition: border 0.2s;
+        }
+
+        input:focus, select:focus { border-color: #4299e1; }
+
+        .radio-group {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 18px;
+        }
+
+        .radio-option {
+          flex: 1;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 10px;
+          text-align: center;
+          cursor: pointer;
+          font-size: 14px;
+          color: #4a5568;
+          transition: all 0.2s;
+        }
+
+        .radio-option.selected {
+          border-color: #4299e1;
+          background: #ebf8ff;
+          color: #2b6cb0;
+          font-weight: 500;
+        }
+
+        .radio-option input { display: none; }
+
+        button {
+          width: 100%;
+          padding: 12px;
+          background: #4299e1;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 15px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        button:hover { background: #3182ce; }
+        button:disabled { background: #a0aec0; cursor: not-allowed; }
+
+        .disclaimer {
+          font-size: 11px;
+          color: #a0aec0;
+          text-align: center;
+          margin-top: 20px;
+          line-height: 1.5;
+        }
+
+        .msg {
+          padding: 10px 14px;
+          border-radius: 8px;
+          font-size: 13px;
+          margin-bottom: 16px;
+          display: none;
+        }
+
+        .msg.error { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+        .msg.success { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">🏥</div>
+    <h1>HealthGuard</h1>
+    <p class="subtitle">Early Risk Detection System — Create your profile to begin</p>
+
+    <div class="msg" id="msg"></div>
+
+    <label>Full name</label>
+    <input type="text" id="name" placeholder="Enter your full name">
+
+    <label>Age</label>
+    <input type="number" id="age" placeholder="Enter your age" min="1" max="120">
+
+    <label>Gender</label>
+    <div class="radio-group">
+        <label class="radio-option" id="opt-male" onclick="selectGender('Male')">
+            <input type="radio" name="gender" value="Male"> Male
+        </label>
+        <label class="radio-option" id="opt-female" onclick="selectGender('Female')">
+            <input type="radio" name="gender" value="Female"> Female
+        </label>
+    </div>
+
+    <label>Family history of heart disease?</label>
+    <select id="familyHistory">
+        <option value="">Select an option</option>
+        <option value="true">Yes — family member has/had heart disease</option>
+        <option value="false">No family history</option>
+    </select>
+
+    <button id="btn" onclick="register()">Create profile</button>
+
+    <p class="disclaimer">
+        ⚠️ This tool is for informational purposes only. It does not diagnose
+        any medical condition and is not a substitute for professional medical advice.
+    </p>
+</div>
+
+<script>
+    let selectedGender = "";
+
+    function selectGender(g) {
+      selectedGender = g;
+      document.getElementById("opt-male").classList.toggle("selected", g === "Male");
+      document.getElementById("opt-female").classList.toggle("selected", g === "Female");
+    }
+
+    function showMsg(text, type) {
+      const el = document.getElementById("msg");
+      el.textContent = text;
+      el.className = "msg " + type;
+      el.style.display = "block";
+    }
+
+    async function register() {
+      // Read values from the form
+      const name          = document.getElementById("name").value.trim();
+      const age           = parseInt(document.getElementById("age").value);
+      const familyHistory = document.getElementById("familyHistory").value;
+
+      // Basic validation before sending to backend
+      if (!name)           return showMsg("Please enter your name.", "error");
+      if (!age || age < 1) return showMsg("Please enter a valid age.", "error");
+      if (!selectedGender) return showMsg("Please select your gender.", "error");
+      if (!familyHistory)  return showMsg("Please select family history.", "error");
+
+      const btn = document.getElementById("btn");
+      btn.disabled = true;
+      btn.textContent = "Creating profile...";
+
+      try {
+        // Send POST request to Spring Boot
+        const response = await fetch("http://localhost:8080/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            age,
+            gender: selectedGender,
+            familyHistory: familyHistory === "true"
+          })
+        });
+
+        const user = await response.json();
+
+        // Save userId to localStorage so other pages can use it
+        localStorage.setItem("userId", user.id);
+        localStorage.setItem("userName", user.name);
+
+        showMsg("Profile created! Redirecting...", "success");
+
+        // Go to vitals page after 1 second
+        setTimeout(() => window.location.href = "vitals.html", 1000);
+
+      } catch (err) {
+        showMsg("Could not connect to server. Make sure Spring Boot is running.", "error");
+        btn.disabled = false;
+        btn.textContent = "Create profile";
+      }
+    }
+</script>
+</body>
+</html>

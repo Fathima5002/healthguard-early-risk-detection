@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard — Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; padding: 30px 16px; }
+        .container { max-width: 520px; margin: 0 auto; }
+
+        .header {
+          background: white; border-radius: 16px; padding: 20px 24px;
+          margin-bottom: 16px; display: flex; justify-content: space-between;
+          align-items: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .header h1 { font-size: 18px; color: #1a202c; }
+
+        .nav { display: flex; gap: 8px; margin-bottom: 16px; }
+        .nav a {
+          flex: 1; text-align: center; padding: 8px; border-radius: 8px;
+          font-size: 12px; font-weight: 500; text-decoration: none;
+          background: white; color: #718096; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .nav a.active { background: #4299e1; color: white; }
+
+        .card {
+          background: white; border-radius: 16px; padding: 24px;
+          margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .card-title {
+          font-size: 14px; font-weight: 600; color: #2d3748;
+          margin-bottom: 16px; padding-bottom: 10px;
+          border-bottom: 1px solid #f0f4f8;
+        }
+
+        .risk-block {
+          border-radius: 12px; padding: 16px 20px;
+          margin-bottom: 12px; display: flex;
+          justify-content: space-between; align-items: center;
+        }
+
+        .risk-block.high     { background: #fff5f5; border: 1px solid #fed7d7; }
+        .risk-block.moderate { background: #fffaf0; border: 1px solid #feebc8; }
+        .risk-block.low      { background: #f0fff4; border: 1px solid #c6f6d5; }
+
+        .risk-label { font-size: 14px; font-weight: 500; }
+        .risk-block.high     .risk-label { color: #c53030; }
+        .risk-block.moderate .risk-label { color: #c05621; }
+        .risk-block.low      .risk-label { color: #276749; }
+
+        .risk-pct { font-size: 24px; font-weight: 600; }
+        .risk-block.high     .risk-pct { color: #c53030; }
+        .risk-block.moderate .risk-pct { color: #c05621; }
+        .risk-block.low      .risk-pct { color: #276749; }
+
+        .risk-cat {
+          font-size: 11px; font-weight: 600; padding: 2px 8px;
+          border-radius: 20px; margin-top: 4px; display: inline-block;
+        }
+        .high  .risk-cat { background: #fed7d7; color: #c53030; }
+        .moderate .risk-cat { background: #feebc8; color: #c05621; }
+        .low   .risk-cat { background: #c6f6d5; color: #276749; }
+
+        .rec-box {
+          background: #ebf8ff; border: 1px solid #bee3f8;
+          border-radius: 12px; padding: 16px; margin-bottom: 16px;
+        }
+        .rec-box .rec-title { font-size: 12px; font-weight: 600; color: #2c5282; margin-bottom: 4px; }
+        .rec-box .rec-text  { font-size: 13px; color: #2b6cb0; line-height: 1.5; }
+
+        .no-data { text-align: center; color: #a0aec0; font-size: 14px; padding: 20px; }
+
+        .btn-submit {
+          display: block; width: 100%; padding: 12px;
+          background: #4299e1; color: white; border: none;
+          border-radius: 10px; font-size: 14px; font-weight: 500;
+          cursor: pointer; text-align: center; text-decoration: none;
+          margin-top: 8px;
+        }
+
+        .disclaimer {
+          font-size: 11px; color: #a0aec0; text-align: center;
+          margin-top: 12px; line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>🏥 HealthGuard</h1>
+        <span id="userName" style="font-size:13px;color:#718096;">Loading...</span>
+    </div>
+
+    <div class="nav">
+        <a href="vitals.html">📋 Vitals</a>
+        <a href="dashboard.html" class="active">📊 Dashboard</a>
+        <a href="history.html">🕐 History</a>
+    </div>
+
+    <div class="card" id="resultsCard">
+        <div class="card-title">📊 Today's risk assessment</div>
+        <div id="results"><div class="no-data">No assessment yet. Submit your vitals first.</div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📈 Risk trend — last 7 entries</div>
+        <canvas id="trendChart" height="200"></canvas>
+    </div>
+
+    <a href="vitals.html" class="btn-submit">+ Submit today's vitals</a>
+
+    <p class="disclaimer">
+        ⚠️ This tool estimates health risk only. Not a medical diagnosis.
+        Consult a qualified healthcare professional for medical advice.
+    </p>
+</div>
+
+<script>
+    document.getElementById("userName").textContent =
+      localStorage.getItem("userName") || "Guest";
+
+    // ── Show latest prediction ────────────────────────────────
+    const raw = localStorage.getItem("lastPrediction");
+
+    if (raw) {
+      const p = JSON.parse(raw);
+      const hPct  = Math.round(p.heartRisk * 100);
+      const dPct  = Math.round(p.diabetesRisk * 100);
+      const hCat  = p.heartCategory.toLowerCase();
+      const dCat  = p.diabetesCategory.toLowerCase();
+
+      document.getElementById("results").innerHTML = `
+        <div class="risk-block ${hCat}">
+          <div>
+            <div class="risk-label">❤️ Heart disease risk</div>
+            <span class="risk-cat">${p.heartCategory}</span>
+          </div>
+          <div class="risk-pct">${hPct}%</div>
+        </div>
+        <div class="risk-block ${dCat}">
+          <div>
+            <div class="risk-label">🩸 Diabetes risk</div>
+            <span class="risk-cat">${p.diabetesCategory}</span>
+          </div>
+          <div class="risk-pct">${dPct}%</div>
+        </div>
+        <div class="rec-box">
+          <div class="rec-title">💡 Recommendation</div>
+          <div class="rec-text">${p.recommendation}</div>
+        </div>
+      `;
+    }
+
+    // ── Load history and draw chart ───────────────────────────
+    const userId = localStorage.getItem("userId");
+
+    async function loadChart() {
+      if (!userId) return;
+
+      try {
+        const res  = await fetch(`http://localhost:8080/api/health/history/${userId}`);
+        const data = await res.json();
+
+        // Take last 7 entries and reverse so oldest is on the left
+        const recent = data.slice(0, 7).reverse();
+
+        const labels  = recent.map((_, i) => `Entry ${i + 1}`);
+        const heart   = recent.map(p => Math.round(p.heartRisk * 100));
+        const diabetes = recent.map(p => Math.round(p.diabetesRisk * 100));
+
+        new Chart(document.getElementById("trendChart"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Heart risk %",
+                data: heart,
+                borderColor: "#e53e3e",
+                backgroundColor: "rgba(229,62,62,0.08)",
+                tension: 0.3,
+                pointRadius: 4,
+                fill: true
+              },
+              {
+                label: "Diabetes risk %",
+                data: diabetes,
+                borderColor: "#dd6b20",
+                backgroundColor: "rgba(221,107,32,0.08)",
+                tension: 0.3,
+                pointRadius: 4,
+                fill: true
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              y: { min: 0, max: 100, ticks: { callback: v => v + "%" } }
+            }
+          }
+        });
+
+      } catch (e) {
+        console.log("Could not load chart data");
+      }
+    }
+
+    loadChart();
+</script>
+</body>
+</html>
